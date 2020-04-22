@@ -194,6 +194,19 @@ decision.</p>
 <p>TODO(ace): Pod QoS -&gt; oomkiller scores</p>
 <p>TODO(ace): Pod priority -&gt; kubelet eviction order</p>
 <p>TODO(ace): eviction by amount exceeding requests</p>
+<pre><pre class="playpen"><code class="language-rust editable">fn main() {
+    let number = 5;
+    print!(&quot;{}&quot;, number);
+}
+</code></pre></pre>
+<pre><code class="language-go editable">import &quot;fmt&quot;
+
+package main
+
+func main() {
+    fmt.Println(&quot;hello, go!&quot;)
+}
+</code></pre>
 
                     </main>
 
@@ -225,21 +238,6 @@ decision.</p>
         </div>
 
         
-        <!-- Livereload script (if served using the cli tool) -->
-        <script type="text/javascript">
-            var socket = new WebSocket("ws://localhost:3001");
-            socket.onmessage = function (event) {
-                if (event.data === "reload") {
-                    socket.close();
-                    location.reload();
-                }
-            };
-
-            window.onbeforeunload = function() {
-                socket.close();
-            }
-        </script>
-        
 
         
 
@@ -251,6 +249,12 @@ decision.</p>
         </script>
         
 
+        
+        <script src="ace.js" type="text/javascript" charset="utf-8"></script>
+        <script src="editor.js" type="text/javascript" charset="utf-8"></script>
+        <script src="mode-rust.js" type="text/javascript" charset="utf-8"></script>
+        <script src="theme-dawn.js" type="text/javascript" charset="utf-8"></script>
+        <script src="theme-tomorrow_night.js" type="text/javascript" charset="utf-8"></script>
         
 
         

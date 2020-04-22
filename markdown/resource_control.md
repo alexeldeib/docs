@@ -67,4 +67,22 @@ TODO(ace): Pod priority -> kubelet eviction order
 
 TODO(ace): eviction by amount exceeding requests
 
+```rust,editable
+fn main() {
+    let number = 5;
+    print!("{}", number);
+}
+```
+
+```go,editable
+import "fmt"
+
+package main
+
+func main() {
+    fmt.Println("hello, go!")
+}
+```
+
 [0]: https://www.kernel.org/doc/html/latest/scheduler/sched-design-CFS.html
+

@@ -8,3 +8,10 @@ title = "Ace's Personal Docs"
 [build]
 build-dir = "docs"
 create-missing = true
+
+[output.html.playpen]
+editable = true
+
+[output.html]
+theme = "theme"
+
