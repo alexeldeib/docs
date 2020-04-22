@@ -4,3 +4,7 @@ language = "en"
 multilingual = false
 src = "markdown"
 title = "Ace's Personal Docs"
+
+[build]
+build-dir = "docs"
+create-missing = true
