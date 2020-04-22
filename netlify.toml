@@ -1,0 +1,4 @@
+# Netlify build instructions
+[build]
+    command = "./hack/build.sh"
+    publish = "./book"
