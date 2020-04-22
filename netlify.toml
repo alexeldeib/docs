@@ -2,16 +2,3 @@
 [build]
     command = "bash ./hack/build.sh"
     publish = "./markdown"
-
-# HTTP-to-HTTPS rules
-[[redirects]]
-    from = "http://docs.alexeldeib.xyz/*"
-    to = "https://docs.alexeldeib.xyz/:splat"
-    status = 301
-    force = true
-
-[[redirects]]
-    from = "http://hungry-knuth-c77dc7.netlify.app/*"
-    to = "https://hungry-knuth-c77dc7.netlify.app/:splat"
-    status = 301
-    force = true
