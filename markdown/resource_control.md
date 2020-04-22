@@ -62,7 +62,9 @@ CFS enforces bandwidth control through these settings.
 ## Kubernetes Pods
 
 TODO(ace): Pod QoS -> oomkiller scores
+
 TODO(ace): Pod priority -> kubelet eviction order
+
 TODO(ace): eviction by amount exceeding requests
 
 [0]: https://www.kernel.org/doc/html/latest/scheduler/sched-design-CFS.html
