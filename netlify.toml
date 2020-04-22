@@ -1,7 +1,7 @@
 # Netlify build instructions
 [build]
     command = "bash ./hack/build.sh"
-    publish = "./book"
+    publish = "./markdown"
 
 # Standard Netlify redirects
 [[redirects]]

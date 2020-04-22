@@ -1,34 +1,54 @@
 # Debugging Disk IO
 
-The goal of this document is to provide guidance to debug disk IO problems in Linux. We will use bpftrace and bcc tracing tools, as well as some more traditional tools.
+The goal of this document is to provide guidance to debug disk IO problems in
+Linux. We will use bpftrace and bcc tracing tools, as well as some more
+traditional tools.
 
-We'll execute this from inside a privileged pod with bpftrace + bcc installed. An example manifest can be found in the root of this repository under manifests/bpftrace/deploy.yaml
+We'll execute this from inside a privileged pod with bpftrace + bcc installed.
+An example manifest can be found in the root of this repository under
+manifests/bpftrace/deploy.yaml
 
 These steps may also be performed from a local machine with the tools installed.
 
 ## OS Context
 
-IO in Linux passes through a virtual filesystem layer, the actual filesystem, the block device interface, the block layer, and finally the physical device. Filesystems perform caching to decrease latency and increase overall performance.
+IO in Linux passes through a virtual filesystem layer, the actual filesystem,
+the block device interface, the block layer, and finally the physical device.
+Filesystems perform caching to decrease latency and increase overall
+performance.
 
-When devices are saturated we expect to see bimodal distributions in latencies, as requests begin to diverege into those immediately serviceable and those for which we must wait. This is a clear sign of potential issues. This can be observed both at the filesystem layer and at the block layer.
+When devices are saturated we expect to see bimodal distributions in latencies,
+as requests begin to diverege into those immediately serviceable and those for
+which we must wait. This is a clear sign of potential issues. This can be
+observed both at the filesystem layer and at the block layer.
 
-Additionally we want to see a high cache hit rate on the filesystem. A low cache hit rate may be characteristic of the workload, but it's a signal for potential further investigation. We expect to see low cache hit reflected by higher block device output, since that work cannot be served out of cache.
+Additionally we want to see a high cache hit rate on the filesystem. A low cache
+hit rate may be characteristic of the workload, but it's a signal for potential
+further investigation. We expect to see low cache hit reflected by higher block
+device output, since that work cannot be served out of cache.
 
 ## Baseline
 
-Under normal circumstances on Azure, we generally expect to see latencies on the order of microseconds with premium SSDs. Under load we see latencies on the order of 10ms.
+Under normal circumstances on Azure, we generally expect to see latencies on the
+order of microseconds with premium SSDs. Under load we see latencies on the
+order of 10ms.
 
 ## Approach
 
 - Check filesystem capacity
-- Use ext4slower to highlight high latency file system access. Look for bimodal distributions or outliers.
+- Use ext4slower to highlight high latency file system access. Look for bimodal
+  distributions or outliers.
 - Use fileslower to track synchronous read/write operations.
 - Examine filesystem latency distribution with ext4dist.
 - Use cachestat to monitor cache hit ratio, look for dips.
-- Manually verify cache hit rate by comparing vfsstat with iostat. The filesystem should see much higher rates than the raw device.
-- Use iostat to check for basic IOPS, utilization, and throughput. Ensure these values are below SKU limits.
-- Examine block IO latency distributions with biolatency. Look for outliers or bimodal distributions.
-- Trace raw block IO with biosnoop and look for latency outliers, or patterns in requests.
+- Manually verify cache hit rate by comparing vfsstat with iostat. The
+  filesystem should see much higher rates than the raw device.
+- Use iostat to check for basic IOPS, utilization, and throughput. Ensure these
+  values are below SKU limits.
+- Examine block IO latency distributions with biolatency. Look for outliers or
+  bimodal distributions.
+- Trace raw block IO with biosnoop and look for latency outliers, or patterns in
+  requests.
 
 ### Disk Capacity
 
@@ -51,9 +71,12 @@ These look fairly empty.
 
 Using ext4dist we can get a high level view of filesystem activity.
 
-The first example is from a system with no activity. The second system has fio running a high queue depth job with 60/40 read/write split. 
+The first example is from a system with no activity. The second system has fio
+running a high queue depth job with 60/40 read/write split. 
 
-We can clearly see a bimodal distribution in the second graph's reads, indicating something may be inducing latency. It's also suspicious that our writes appear to have zero latency while we have high latency reads.
+We can clearly see a bimodal distribution in the second graph's reads,
+indicating something may be inducing latency. It's also suspicious that our
+writes appear to have zero latency while we have high latency reads.
 
 ```bash
 root@aks-nodepool1-14345218-vmss000003:/# ext4dist-bpfcc  
@@ -134,9 +157,11 @@ operation = open
 
 #### Finding problematic processes
 
-We can use ext4slower to find specific files where operations hit high latencies.
+We can use ext4slower to find specific files where operations hit high
+latencies.
 
-There would be an example from an unloaded system here, but there should be no output.
+There would be an example from an unloaded system here, but there should be no
+output.
 
 ```bash
 root@aks-nodepool1-14345218-vmss000003:/# ext4slower-bpfcc
@@ -144,7 +169,8 @@ Tracing ext4 operations slower than 10 ms
 TIME     COMM           PID    T BYTES   OFF_KB   LAT(ms) FILENAME
 ```
 
-On a loaded system with fio, we immediately see latencies in double digit milliseconds.
+On a loaded system with fio, we immediately see latencies in double digit
+milliseconds.
 
 ```bash
 root@aks-nodepool1-14345218-vmss000003:/# ext4slower-bpfcc
@@ -163,9 +189,15 @@ TIME     COMM           PID    T BYTES   OFF_KB   LAT(ms) FILENAME
 
 #### Examining cache hit ratio
 
-Cachestat provides output about cache hit percentage, dirty blocks, cache hits, and amount of data read from cache. We generally want to see a high cache hit rate, and also see this reflected in filesystem IO vs disk IO (filesystem IO should be much higher if caching is working).
+Cachestat provides output about cache hit percentage, dirty blocks, cache hits,
+and amount of data read from cache. We generally want to see a high cache hit
+rate, and also see this reflected in filesystem IO vs disk IO (filesystem IO
+should be much higher if caching is working).
 
-We provide output for an unloaded and loaded system. On the unloaded system, cache hit rate is a solid 100%. On the loaded system, we see it's 100% before the workload kicks in, and then it plummets to zero. This was a synthetic fio workload with a 60/40 read write mix.
+We provide output for an unloaded and loaded system. On the unloaded system,
+cache hit rate is a solid 100%. On the loaded system, we see it's 100% before
+the workload kicks in, and then it plummets to zero. This was a synthetic fio
+workload with a 60/40 read write mix.
 
 ```bash
 root@aks-nodepool1-14345218-vmss000003:/# cachestat-bpfcc 
@@ -204,7 +236,8 @@ root@aks-nodepool1-14345218-vmss000003:/# cachestat-bpfcc
        0     7325    10083    0.00%          391       4708
 ```
 
-We can compare these block IO using iostat and should see the lower cache hit rate reflected as more block IO.
+We can compare these block IO using iostat and should see the lower cache hit
+rate reflected as more block IO.
 
 ### Block devices
 
@@ -240,17 +273,24 @@ sdb               0.00         0.00         0.00         0.00          0        
 scd0              0.00         0.00         0.00         0.00          0          0          0
 ```
 
-Using more detailed output from `iostat -xt`, you'll also see the queue size explode and individual read and write wait times increase under load.
+Using more detailed output from `iostat -xt`, you'll also see the queue size
+explode and individual read and write wait times increase under load.
 
 #### Latency
 
 We can use biolatency to identify problems on different disks.
 
-The top chart is an unloaded system. The middle chart is a sytem with fio running against a file on /dev/sda. We see a spike of latencies around the same numbers as the unloaded system, in much higher volume, with a long tail and slightly increase in higher latency.
+The top chart is an unloaded system. The middle chart is a sytem with fio
+running against a file on /dev/sda. We see a spike of latencies around the same
+numbers as the unloaded system, in much higher volume, with a long tail and
+slightly increase in higher latency.
 
-If we switch fio to direct IO, we will immediately see the latency spike as we get throttled on IOPS. This is third chart.
+If we switch fio to direct IO, we will immediately see the latency spike as we
+get throttled on IOPS. This is third chart.
 
-The middle chart shows a good example of the filesystem layer with caching shielding the underlying block devices from heavier IO. This shield is removed in the last graph, and we saw the raw disk devices suffer immediately.
+The middle chart shows a good example of the filesystem layer with caching
+shielding the underlying block devices from heavier IO. This shield is removed
+in the last graph, and we saw the raw disk devices suffer immediately.
 
 ```bash
 root@aks-nodepool1-14345218-vmss000003:/# biolatency-bpfcc -D
@@ -366,9 +406,12 @@ disk = b''
 
 #### Finding offending processes 
 
-Biosnoop can help find offending processes by pointing out high latency or high frequency operations. Biotop can help in a similar way
+Biosnoop can help find offending processes by pointing out high latency or high
+frequency operations. Biotop can help in a similar way
 
-Here we have a single system snapshot, before and during a fio run. Latency and queue times both start low, and then latency spikes to 44ms as the disk device gets saturated and throttled.
+Here we have a single system snapshot, before and during a fio run. Latency and
+queue times both start low, and then latency spikes to 44ms as the disk device
+gets saturated and throttled.
 
 ```bash
 root@aks-nodepool1-14345218-vmss000003:/# biosnoop-bpfcc -Q
@@ -395,7 +438,8 @@ TIME(s)     COMM           PID    DISK    T SECTOR     BYTES  QUE(ms) LAT(ms)
 8.581576    fio            59557  sda     R 16657568   4096      0.00   44.30
 ```
 
-biotop can provide similar information and filter only to the top few events, plus refresh on an interval.
+biotop can provide similar information and filter only to the top few events,
+plus refresh on an interval.
 
 ```bash
 root@aks-nodepool1-14345218-vmss000003:/# biotop-bpfcc

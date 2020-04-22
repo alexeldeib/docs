@@ -2,5 +2,5 @@
 authors = ["Ace Eldeib"]
 language = "en"
 multilingual = false
-src = "src"
+src = "markdown"
 title = "Ace's Personal Docs"
